@@ -38,8 +38,8 @@ return [
     'nhif' => [
         'base_url'       => env('NHIF_BASE_URL', 'https://test.nhif.or.tz'),
         'auth_url'       => env('NHIF_AUTH_URL', 'https://test.nhif.or.tz/authserver/connect/token'),
-        'client_id'      => env('NHIF_CLIENT_ID'),
-        'client_secret'  => env('NHIF_CLIENT_SECRET'),
+        'client_id'      => env('NHIF_CLIENT_ID', '06633'),
+        'client_secret'  => env('NHIF_CLIENT_SECRET', 'Zgilry+AJQ8Nm2qXpQyPdQ=='),
         'scope'          => env('NHIF_SCOPE', 'OnlineServices'),
         'facility_code'  => env('NHIF_FACILITY_CODE'),
     ],
