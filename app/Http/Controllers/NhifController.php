@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceBill;
+use App\Models\NhifFolio;
+use App\Models\PatientAttendance;
 use App\Services\Nhif\NhifAuthService;
 use App\Services\Nhif\NhifOcsService;
 use App\Services\Nhif\NhifServiceHubService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
 class NhifController extends Controller
@@ -485,6 +489,231 @@ class NhifController extends Controller
         return $this->nhifCall(
             fn () => $this->hub->getVisitSummary($request->authorizationNo)
         );
+    }
+
+    // =========================================================================
+    // Smart Attendance-Based Actions (used by Blade AJAX)
+    // =========================================================================
+
+    /**
+     * GET /nhif/card-details?card_no=xxx
+     * Frontend-friendly alias: accepts snake_case `card_no`.
+     */
+    public function getCardDetailsFrontend(Request $request): JsonResponse
+    {
+        $request->validate(['card_no' => 'required|string']);
+        return $this->nhifCall(fn () => $this->hub->getCardDetails($request->card_no));
+    }
+
+    /**
+     * POST /nhif/attendance/request-otp
+     * Send OTP for bill confirmation using attendance_id + card_no.
+     */
+    public function attendanceRequestOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'attendance_id' => 'required|integer',
+            'card_no'       => 'required|string',
+        ]);
+
+        $attend = PatientAttendance::findOrFail($request->attendance_id);
+        $bills  = AttendanceBill::where('attendance_id', $attend->id)
+            ->where('status', 'unpaid')->get();
+        $total  = $bills->sum('amount');
+
+        $data = [
+            'FacilityCode'    => config('services.nhif.facility_code'),
+            'CardNo'          => $request->card_no,
+            'AuthorizationNo' => $attend->nhif_authorization_no ?? '',
+            'AttendanceDate'  => $attend->created_at->format('Y-m-d'),
+            'TotalAmount'     => $total,
+        ];
+
+        $result = $this->nhifCall(fn () => $this->ocs->requestBillConfirmation($data));
+
+        // Save card number to the attendance record
+        $attend->nhif_card_no = $request->card_no;
+        $attend->save();
+
+        return $result;
+    }
+
+    /**
+     * GET /nhif/attendance/get-bill-confirmation
+     * Verify OTP code.
+     */
+    public function attendanceGetBillConfirmation(Request $request): JsonResponse
+    {
+        $request->validate([
+            'card_no'           => 'required|string',
+            'confirmation_code' => 'required|string',
+        ]);
+
+        return $this->nhifCall(
+            fn () => $this->ocs->getBillConfirmation($request->card_no)
+        );
+    }
+
+    /**
+     * POST /nhif/attendance/submit-folio
+     * Build and submit a folio from attendance bills.
+     */
+    public function attendanceSubmitFolio(Request $request): JsonResponse
+    {
+        $request->validate(['attendance_id' => 'required|integer']);
+
+        $attend  = PatientAttendance::with(['patient', 'insurance'])->findOrFail($request->attendance_id);
+        $patient = $attend->patient;
+        $bills   = AttendanceBill::where('attendance_id', $attend->id)
+            ->where('status', 'unpaid')->get();
+
+        if ($bills->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No unpaid bills found.'], 422);
+        }
+
+        $cardNo      = $attend->nhif_card_no ?? $patient->nhif_card_no;
+        $claimYear   = (int) $attend->created_at->format('Y');
+        $claimMonth  = (int) $attend->created_at->format('n');
+        $totalAmount = $bills->sum('amount');
+        $facilityCode= config('services.nhif.facility_code');
+
+        // Build FolioItems array from attendance bills
+        $folioItems = $bills->map(function ($bill) {
+            return [
+                'ItemCode'      => $bill->nhif_item_code ?? 'GEN',
+                'ItemTypeID'    => $bill->nhif_item_type_id ?? 5,
+                'OtherDetails'  => $bill->name,
+                'UnitPrice'     => (float) $bill->amount,
+                'ItemQuantity'  => 1,
+                'AmountClaimed' => (float) $bill->amount,
+            ];
+        })->values()->toArray();
+
+        $folio = [
+            'FacilityCode'     => $facilityCode,
+            'ClaimYear'        => $claimYear,
+            'ClaimMonth'       => $claimMonth,
+            'FolioNo'          => time(), // NHIF may assign; use timestamp as draft
+            'CardNo'           => $cardNo,
+            'FirstName'        => explode(' ', $patient->name)[0] ?? '',
+            'LastName'         => implode(' ', array_slice(explode(' ', $patient->name), 1)) ?: $patient->name,
+            'Gender'           => strtoupper(substr($patient->gender ?? 'M', 0, 1)),
+            'DateOfBirth'      => $patient->dob ?? '1990-01-01',
+            'AttendanceDate'   => $attend->created_at->format('Y-m-d'),
+            'VisitTypeID'      => $attend->nhif_visit_type_id ?? 1,
+            'AuthorizationNo'  => $attend->nhif_authorization_no ?? '',
+            'AmountClaimed'    => $totalAmount,
+            'MainDiagnosisCode'=> 'Z00', // Placeholder; doctor should set this
+            'PatientFileNo'    => (string) $patient->id,
+            'FolioItems'       => $folioItems,
+        ];
+
+        $result = $this->ocs->submitFolio($folio);
+
+        // Persist folio record
+        $nhifFolio = NhifFolio::firstOrNew(['attendance_id' => $attend->id]);
+        $nhifFolio->fill([
+            'folio_no'       => $result['FolioNo'] ?? null,
+            'patient_card_no'=> $cardNo,
+            'authorization_no'=> $attend->nhif_authorization_no,
+            'claim_year'     => $claimYear,
+            'claim_month'    => $claimMonth,
+            'amount_claimed' => $totalAmount,
+            'status'         => 'submitted',
+            'folio_items'    => $folioItems,
+            'submitted_at'   => now(),
+            'creator_id'     => Auth::id(),
+        ]);
+        $nhifFolio->save();
+
+        $attend->nhif_folio_no    = $nhifFolio->folio_no;
+        $attend->nhif_claim_status = 'submitted';
+        $attend->nhif_claimed_amount = $totalAmount;
+        $attend->save();
+
+        return response()->json(['success' => true, 'data' => $result]);
+    }
+
+    /**
+     * POST /nhif/attendance/sign-folio
+     * Sign a submitted folio.
+     */
+    public function attendanceSignFolio(Request $request): JsonResponse
+    {
+        $request->validate([
+            'attendance_id' => 'required|integer',
+            'folio_no'      => 'required|integer',
+        ]);
+
+        $attend    = PatientAttendance::findOrFail($request->attendance_id);
+        $nhifFolio = NhifFolio::where('attendance_id', $attend->id)->firstOrFail();
+        $totalAmount = $nhifFolio->amount_claimed;
+
+        $data = [
+            'CardNo'          => $nhifFolio->patient_card_no,
+            'AuthorizationNo' => $nhifFolio->authorization_no ?? '',
+            'AmountClaimed'   => $totalAmount,
+            'SignatureMethod'  => 'Electronic',
+            'SignedBy'        => (string) Auth::id(),
+            'SignedByName'    => Auth::user()->name ?? 'Staff',
+        ];
+
+        $result = $this->ocs->signFolio($data);
+
+        $nhifFolio->status    = 'signed';
+        $nhifFolio->signed_at = now();
+        $nhifFolio->save();
+
+        $attend->nhif_claim_status = 'signed';
+        $attend->save();
+
+        return response()->json(['success' => true, 'data' => $result]);
+    }
+
+    /**
+     * POST /nhif/attendance/submit-monthly-claim
+     * Submit monthly batch for all signed folios in a given period.
+     */
+    public function attendanceSubmitMonthlyClaim(Request $request): JsonResponse
+    {
+        $request->validate([
+            'claim_year'  => 'required|integer',
+            'claim_month' => 'required|integer|between:1,12',
+        ]);
+
+        $folios = NhifFolio::forMonth($request->claim_year, $request->claim_month)
+            ->where('status', 'signed')->get();
+
+        if ($folios->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No signed folios found for this period.'], 422);
+        }
+
+        $data = [
+            'FacilityCode'       => config('services.nhif.facility_code'),
+            'ClaimYear'          => (int) $request->claim_year,
+            'ClaimMonth'         => (int) $request->claim_month,
+            'FoliosSubmitted'    => $folios->count(),
+            'TotalAmountClaimed' => $folios->sum('amount_claimed'),
+        ];
+
+        return $this->nhifCall(fn () => $this->ocs->submitMonthlyClaim($data));
+    }
+
+    /**
+     * GET /nhif/claims — Claims dashboard view.
+     */
+    public function claimsDashboard(Request $request)
+    {
+        $year  = (int) $request->input('year', date('Y'));
+        $month = (int) $request->input('month', date('n'));
+
+        $folios = NhifFolio::with(['attendance.patient'])
+            ->where('claim_year', $year)
+            ->where('claim_month', $month)
+            ->orderByDesc('id')
+            ->get();
+
+        return view('nhif.claims', compact('folios', 'year', 'month'));
     }
 
     // =========================================================================

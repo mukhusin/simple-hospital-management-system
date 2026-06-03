@@ -305,6 +305,7 @@ Route::middleware(['auth_user'])->group(function () {
         Route::post('submit-folio',             [NhifController::class, 'submitFolio'])->name('submit-folio');
         Route::post('sign-folio',               [NhifController::class, 'signFolio'])->name('sign-folio');
         Route::post('request-bill-confirmation',[NhifController::class, 'requestBillConfirmation'])->name('request-bill-confirmation');
+        Route::get('get-bill-confirmation',     [NhifController::class, 'attendanceGetBillConfirmation'])->name('get-bill-confirmation');
         Route::get('submitted-claims',          [NhifController::class, 'getSubmittedClaims'])->name('submitted-claims');
         Route::post('submit-monthly-claim',     [NhifController::class, 'submitMonthlyClaim'])->name('submit-monthly-claim');
 
@@ -314,5 +315,17 @@ Route::middleware(['auth_user'])->group(function () {
         Route::get('diseases',                  [NhifController::class, 'getDiseases'])->name('diseases');
         Route::get('items',                     [NhifController::class, 'getItems'])->name('items');
         Route::get('co-payment-schedule',       [NhifController::class, 'getCoPaymentSchedule'])->name('co-payment-schedule');
+
+        // Attendance-based smart actions (used by Blade AJAX)
+        Route::post('attendance/request-otp',   [NhifController::class, 'attendanceRequestOtp'])->name('attendance.request-otp');
+        Route::post('attendance/submit-folio',  [NhifController::class, 'attendanceSubmitFolio'])->name('attendance.submit-folio');
+        Route::post('attendance/sign-folio',    [NhifController::class, 'attendanceSignFolio'])->name('attendance.sign-folio');
+        Route::post('attendance/submit-monthly-claim', [NhifController::class, 'attendanceSubmitMonthlyClaim'])->name('attendance.submit-monthly-claim');
+
+        // Frontend-friendly card lookup (accepts card_no snake_case)
+        Route::get('card-details-frontend',     [NhifController::class, 'getCardDetailsFrontend'])->name('card-details-frontend');
+
+        // Claims dashboard view
+        Route::get('claims',                    [NhifController::class, 'claimsDashboard'])->name('claims');
     });
 });

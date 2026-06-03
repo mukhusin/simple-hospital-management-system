@@ -95,7 +95,7 @@ class PageController extends Controller {
 		);
 		if (Auth::attempt($data)) {
 			if (Auth::user()->hide == 1) {
-				Widget::refresh();
+				Widget::refreshWidgets();
 				return Redirect::to('check');
 			}
 			return Redirect::to('login')->with('error','Your Account have been deleted!');

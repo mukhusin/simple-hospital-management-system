@@ -1,5 +1,12 @@
 @extends('master')
-
+@php
+    use App\Models\User;
+    use App\Models\Insurance;
+    use App\Models\LabTest;
+    use App\Models\Medical;
+    use App\Models\Widget;
+    use App\Models\AttendanceBill;
+@endphp
 @section('main')
 <div class="row">
 	<div class="col-lg-12">

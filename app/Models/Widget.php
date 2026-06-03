@@ -182,7 +182,7 @@ class Widget extends Model {
 		}
 	}
 
-	static function refresh()
+	static function refreshWidgets()
 	{
 		$m = Medical::all();
 		foreach ($m as $key => $value) {

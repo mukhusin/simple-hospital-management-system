@@ -61,7 +61,8 @@ class DoctorController extends Controller
                     'Code',
                     'Disease',
                     'Option',
-                )
+                ),
+                'column_keys' => array('id', 'code', 'name', 'options'),
             )
         );
         $_title = 'Diagnosis List';

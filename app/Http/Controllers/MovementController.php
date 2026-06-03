@@ -358,7 +358,8 @@ class MovementController extends Controller
 			->select(DB::raw('year(created_at) as y, month(created_at) as m, count(id) as sum, reattend as status'))
 			->where('doctor_id', '=', Auth::user()->id)
 			->groupBy(DB::raw('year(created_at)'), DB::raw('month(created_at)'), 'reattend')
-			->orderby('created_at', 'desc')
+		->orderby(DB::raw('year(created_at)'), 'desc')
+		->orderby(DB::raw('month(created_at)'), 'desc')
 			->limit(6)
 			->get();
 
@@ -448,7 +449,8 @@ class MovementController extends Controller
 					'Gender',
 					'Located',
 					'Options',
-				)
+				),
+				'column_keys' => array('patient_id', 'patient', 'gender', 'to_office', 'options'),
 			)
 		);
 		$_title = 'Patients Emergence Medicine Request';

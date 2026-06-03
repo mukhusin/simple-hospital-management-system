@@ -129,4 +129,19 @@ class PatientAttendance extends Model {
         return 0;
     }
 
+    public function nhifFolio()
+    {
+        return $this->hasOne(NhifFolio::class, 'attendance_id');
+    }
+
+    public function isNhifPatient(): bool
+    {
+        return $this->insurance_id > 0 && !empty($this->nhif_card_no);
+    }
+
+    public function nhifClaimPending(): bool
+    {
+        return $this->isNhifPatient() && in_array($this->nhif_claim_status, [null, 'pending']);
+    }
+
 }

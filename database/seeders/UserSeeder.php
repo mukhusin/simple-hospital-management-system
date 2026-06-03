@@ -16,12 +16,21 @@ class UserSeeder extends Seeder
                 'name'     => 'System Admin',
                 'level'    => 0,
                 'role_id'  => 1,
+                'office_id'      => 1,
             ],
             [
                 'username' => 'doctor',
                 'name'     => 'Doctor Test',
                 'level'    => 1,
                 'role_id'  => 3,
+                'office_id'      => 1,
+            ],
+            [
+                'username' => 'receptionist',
+                'name'     => 'Receptionist Test',
+                'level'    => 0,
+                'role_id'  => 1,
+                'office_id'      => 6,
             ],
         ];
 
@@ -33,7 +42,6 @@ class UserSeeder extends Seeder
                 array_merge($user, [
                     'password'       => Hash::make('password'),
                     'status'         => 'active',
-                    'office_id'      => 1,
                     'hide'           => 0,
                     'remember_token' => '',
                     'updator_id'     => 0,

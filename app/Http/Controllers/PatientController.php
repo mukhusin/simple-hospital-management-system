@@ -172,6 +172,7 @@ class PatientController extends Controller
         $p->card = request('card');
         $p->sponsor = request('sponsor');
         $p->sponsor_code = request('sponsor_code');
+        $p->nhif_card_no = request('nhif_card_no') ?: null;
         $p->contact_name = ucwords(request('contact_name'));
         $p->contact_phone = request('contact_phone');
 
