@@ -1,58 +1,201 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# HosCare HMS
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**HosCare** is a comprehensive Hospital Management System (HMS) built for Tanzanian healthcare facilities. It manages the full patient lifecycle — from registration and clinical consultation to laboratory, pharmacy dispensing, billing, and NHIF insurance claims submission — all in a single, role-based web application.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Patient Management
+- Patient registration with demographics and file number
+- Attendance/visit tracking (outpatient & inpatient)
+- Vital signs recording
+- Allergy and medical history logging
+- Emergency patient handling
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Clinical Workflow
+- Doctor consultation and clinical notes
+- Diagnosis management with ICD-10 codes
+- Investigation and lab test requests
+- Treatment planning and prescription
 
-## Learning Laravel
+### Laboratory
+- Sample registration and result entry
+- Lab test catalogue management
+- Lab report generation
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Pharmacy
+- Drug/medicine stock management
+- Prescription dispensing for regular and emergency patients
+- Inventory tracking and zero-stock alerts
+- Pharmacy reports
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Billing & Payments
+- Itemised bill generation per attendance
+- Payment recording and receipt printing
+- Bill editing and adjustments
+- Payment reports and income statements
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### NHIF Insurance Integration
+Full integration with the Tanzania National Health Insurance Fund (NHIF) APIs:
+- **Card verification** — verify member eligibility and coverage in real time
+- **Service approvals** — request and track NHIF service authorizations
+- **Inpatient admissions** — admit, transfer, and discharge patients through NHIF
+- **Referrals** — create and acknowledge service/treatment referrals
+- **Pre-approvals** — request pre-authorization for high-cost services
+- **Claims (OCS)** — submit individual folios and monthly claim batches
+- **Bill confirmation** — OTP-based patient bill confirmation
+- **Price lists** — pull NHIF package pricing and excluded services
+- **Practitioner attendance** — log practitioner sessions biometrically
 
-## Agentic Development
+### Financial Management
+- Expense ledger and transaction tracking
+- Expense reports and income statements
+- Invoice management
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Administration & Reports
+- Role-based user access control
+- Ward and room management
+- Insurance scheme configuration
+- Procedure catalogue
+- Sales, inventory, lab, and attendance reports
+- Doctor performance tracking
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Laravel 13 |
+| Language | PHP 8.3+ |
+| Database | MySQL / MariaDB |
+| Frontend | Blade templates, Bootstrap, jQuery |
+| DataTables | Yajra Laravel DataTables 13 |
+| HTTP Client | Laravel `Http` facade (Guzzle) |
+| Auth | Session-based with role/level guards |
+| Cache | File cache (token management) |
+| Build tool | Vite |
+
+---
+
+## Requirements
+
+- PHP >= 8.3
+- Composer
+- Node.js >= 18 & npm
+- MySQL 8+ or MariaDB 10.6+
+- A web server (Nginx / Apache) or `php artisan serve` for local development
+
+---
+
+## Installation
 
 ```bash
-composer require laravel/boost --dev
+# 1. Clone the repository
+git clone <repository-url> hoscare-hms
+cd hoscare-hms
 
-php artisan boost:install
+# 2. Install PHP dependencies
+composer install
+
+# 3. Install frontend dependencies
+npm install && npm run build
+
+# 4. Copy environment file and generate app key
+cp .env.example .env
+php artisan key:generate
+
+# 5. Configure your database in .env
+#    DB_DATABASE, DB_USERNAME, DB_PASSWORD
+
+# 6. Run migrations and seed the database
+php artisan migrate --seed
+
+# 7. Start the development server
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## NHIF Integration Setup
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Add the following variables to your `.env` file. Credentials are issued by NHIF Tanzania through their facility registration portal.
 
-## Code of Conduct
+```env
+# Use https://test.nhif.or.tz for sandbox, https://nhif.or.tz for production
+NHIF_BASE_URL=https://test.nhif.or.tz
+NHIF_AUTH_URL=https://test.nhif.or.tz/authserver/connect/token
+NHIF_CLIENT_ID=your_client_id
+NHIF_CLIENT_SECRET=your_client_secret
+NHIF_SCOPE=OnlineServices
+NHIF_FACILITY_CODE=your_facility_code
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The integration covers two NHIF services:
 
-## Security Vulnerabilities
+| Service | Base URL | Purpose |
+|---|---|---|
+| ServiceHub | `/servicehub` | Verification, approvals, admissions, referrals |
+| OCS | `/ocs` | Online claims submission and pricing |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+All NHIF routes are available under `/nhif/*` and are protected by the application's authentication middleware.
+
+---
+
+## Project Structure
+
+```
+app/
+├── Http/
+│   ├── Controllers/          # Feature controllers (Patient, Payment, Pharmacy, Nhif, …)
+│   └── Middleware/
+├── Models/                   # Eloquent models (Patient, Insurance, PatientAttendance, …)
+├── Services/
+│   └── Nhif/                 # NHIF service layer
+│       ├── NhifAuthService.php       # Token management with caching
+│       ├── NhifServiceHubService.php # ServiceHub API wrapper
+│       └── NhifOcsService.php        # OCS claims API wrapper
+└── Providers/
+config/
+├── services.php              # Third-party service config (includes NHIF)
+routes/
+└── web.php                   # All application routes including /nhif/* group
+```
+
+---
+
+## User Roles
+
+The system uses a level + role-based access model:
+
+| Level | Role | Access |
+|---|---|---|
+| 1 | Admin | Full system access |
+| 0 | Staff | Role-restricted access (doctor, nurse, pharmacist, lab, finance, etc.) |
+
+---
+
+## Key Workflows
+
+### Outpatient Visit
+1. Receptionist registers/searches patient → starts attendance
+2. Nurse records vitals and allergies
+3. Doctor writes clinical notes, orders investigations, writes prescription
+4. Lab technician registers sample and enters results
+5. Pharmacist dispenses medication
+6. Cashier generates bill and records payment
+7. (NHIF patients) Bill confirmation OTP sent → folio submitted to OCS
+
+### NHIF Claim Submission
+1. Verify patient card → `GET /nhif/verify-card`
+2. Record services rendered during visit
+3. Request bill confirmation OTP → `POST /nhif/request-bill-confirmation`
+4. Sign and submit folio → `POST /nhif/sign-folio` → `POST /nhif/submit-folio`
+5. End of month: batch submit → `POST /nhif/submit-monthly-claim`
+
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is proprietary software. All rights reserved.
