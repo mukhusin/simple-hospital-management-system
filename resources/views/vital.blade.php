@@ -1,0 +1,1 @@
+/private/var/apps/hospital/app/views/vital.blade.php
